@@ -1,7 +1,7 @@
 # Community-Games-Bot
 A Discord bot written using the discord.py library for simple tabletop games with friends in your server.
 
-***NOTE: This project has been discontinued, and as such does not support the latest Discord API features such as threads, slash commands and other interactions.***
+***NOTE: This project is currently not being maintained, and as such does not support the latest Discord API features such as threads, slash commands and other interactions.***
 
 ## Commands
 ### Game Commands
