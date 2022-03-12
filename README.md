@@ -110,8 +110,4 @@ These commands are only accessible by users in the dev_user_ids list, no respons
 - **languages.py**
   - Just kidding, there's this as well. It contains all the possible outputs for each language in one class, which is called in `main.py`
 - **words.pkl**
-  - The list of words used in Hangman. It is currently incomplete, but (this)[https://github.com/dwyl/english-words] might come in handy if you want to expand it.
-
-## Dependencies
-- (discord.py)[https://github.com/Rapptz/discord.py]
-- (emoji)[https://github.com/carpedm20/emoji]
+  - The list of words used in Hangman. It is currently incomplete, but [this](https://github.com/dwyl/english-words) might come in handy if you want to expand it.
