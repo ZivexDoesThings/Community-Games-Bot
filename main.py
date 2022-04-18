@@ -145,7 +145,7 @@ class LoopsCog(commands.Cog):
         global gamesPlayed
         global windata
         await asyncio.sleep(20)
-        gamesPlayed = {} # Clears the number of games played per person (which resets the triggers for the sendPromo function
+        gamesPlayed = {} # Clears the number of games played per person (which resets the triggers for the sendPromo function)
         for user in windata:
             if not bot.get_user(user): del windata[user] # Removes the user from the stats when an attempt to find the user returns None, meaning the user no longer exists
             try:
@@ -170,14 +170,14 @@ async def on_raw_reaction_add(payload):
             try:
                 if type(i.parent).__name__ == "PreGame":
                     if i.parent.game.name == "Mega Connect 4":
-                        valid_user = True
+                        valid_user = True # MC4 doesn't specify any users when gathering players, so everyone is valid :)
                     else:
                         valid_user = False
-                        for user in i.users:
+                        for user in i.users: # Checks through the users it's currently waiting for a reaction from
                             if payload.user_id == user.id:
                                 valid_user = True
-                    if payload.message_id == i.msg.id and str(payload.emoji) in i.emoji and valid_user:
-                        i.reaction = str(payload.emoji)
+                    if payload.message_id == i.msg.id and str(payload.emoji) in i.emoji and valid_user: # If the reaction received is from the right person, on the right message, with the right emoji
+                        i.reaction = str(payload.emoji) # Updates the variables in the relevant PreGame object
                         i.react_user = bot.get_user(payload.user_id)
                         return
             except:
@@ -228,11 +228,11 @@ async def on_message(message):
             if message.channel.id == i.users[0].dm_channel.id and message.author in i.users: i.message = message
 
 
-class Kill(Exception):
+class Kill(Exception): # Custom exception for when the stop command is run
     pass
 
 class Timer:
-    def __init__(self, timeout):
+    def __init__(self, timeout): # Only initialises variables, other parts of the code will update and check the elapsed time as part of a while loop/if statement
         self.timed_out  = False
         self.timeout = timeout
         self.start_time = time.perf_counter()
@@ -256,12 +256,12 @@ class ReactionTimeout:
         while self.timer.elapsed < self.time:
             await asyncio.sleep(0.1)
             if type(self.parent).__name__ != "PreGame" and type(self.parent).__name__ != "Setup" and type(self.parent).__name__ != "Nothing":
-                self.parent.killcheck()
+                self.parent.killcheck() # Checks if the stop command is run, and throws the Kill exception if so, stopping this process, and then the game itself
             elif type(self.parent).__name__ == "Setup":
                 self.parent.parent.killcheck()
             self.timer.elapsed = time.perf_counter() - self.timer.start_time
             if self.reaction:
-                break
+                break # Moves on once a reaction has been received from the user (from the on_raw_reaction_add event)
         pending_reactions.remove(self)
         if self.timer.elapsed >= self.timer.timeout:
             self.timed_out = True
@@ -283,32 +283,34 @@ class MessageTimeout:
         pending_messages.append(self)
         while self.timer.elapsed < self.time:
             await asyncio.sleep(0.1)
-            if type(self.parent).__name__ == "Setup": self.parent.parent.killcheck()
-            else: self.parent.killcheck()
+            if type(self.parent).__name__ == "Setup":
+                self.parent.parent.killcheck()
+            else:
+                self.parent.killcheck() # Checks if the stop command is run, and throws the Kill exception if so, stopping this process, and then the game itself
             self.timer.elapsed = time.perf_counter() - self.timer.start_time
-            if self.message: break
+            if self.message: break # Moves on once a valid message has been received, meeting all the conditions in the on_message event
         pending_messages.remove(self)
         if self.timer.elapsed >= self.timer.timeout:
             self.timed_out = True
         return self.message
 
 @bot.event
-async def on_command_error(ctx, error):
+async def on_command_error(ctx, error): # Logs errors thrown by any commands in errorlog.log (see line 82 to change the file to write to)
     global langs
     if ctx.guild.id in langs: lang = Language(langs[ctx.guild.id])
     else: lang = Language("English")
-    if isinstance(error, commands.CommandNotFound): return
+    if isinstance(error, commands.CommandNotFound): return # Ignores if the prefix is run with a command that doesn't exist after
     if isinstance(error, commands.MemberNotFound):
-        await ctx.send(lang.cantFindPerson)
+        await ctx.send(lang.cantFindPerson) # Used when a player is mentioned in a game command but they are not in the server the command is run in
         return
-    if isinstance(error, discord.errors.Forbidden): return
+    if isinstance(error, discord.errors.Forbidden): return # Ignores if the bot has lost access to the channel the command was run in
     if isinstance(error, discord.errors.NotFound): return
     info = traceback.format_exception(type(error), error, error.__traceback__)
     logger.exception(("Error - Original Message: \"" + ctx.message.content + "\" - Server: " + ctx.guild.name + " - Channel: " + ctx.channel.name + "\n" + "".join(info)), exc_info=False)
     
 #------------------------------------------------------------------- PRE-GAME SETUP CLASS -------------------------------------------------------------------
 #############################################################################################################################################################
-    
+
 class PreGame:
     def __init__(self, ctx, game, player2, limitRange, premRange):
         self.ctx = ctx
@@ -522,7 +524,6 @@ class PreGame:
                 await asyncio.sleep(4)
                 break
         
-        
         await msg.delete()
         random.shuffle(players)
         self.game.players = players
@@ -543,19 +544,17 @@ class Game:
         self.mode = mode
         self.limitRange = list(limitRange)
         self.premRange = list(premRange)
-        if self.ctx.guild.id in prefixes:
-            self.prefix = prefixes[self.ctx.guild.id]
-        else:
-            self.prefix = default_prefix
+        if self.ctx.guild.id in prefixes: self.prefix = prefixes[self.ctx.guild.id]
+        else: self.prefix = default_prefix
         if self.ctx.guild.id in langs: self.lang = Language(langs[ctx.guild.id])
         else: self.lang = Language("English")
 
     def killcheck(self):
         global killing
-        if self.gameID in killing:
+        if self.gameID in killing: # Checks if the stop command has been run by anyone in the current game
             raise Kill
 
-    async def pregame(self):
+    async def pregame(self): # Default pregame function - for two-player games only.
         global inGame
         global nextID
         pg = PreGame(self.ctx, self, self.player2, self.limitRange, self.premRange)
@@ -566,21 +565,17 @@ class Game:
             nextID += 1
             inGame[self.gameID] = self
             random.shuffle(self.players)
-            if self.name == "Connect 4":
-                await self.connect4()
-            elif self.name == "Tic Tac Toe":
-                await self.tictactoe()
-            elif self.name == "MasterMind":
-                await self.mastermind()
-            elif self.name == "Battleship":
-                await self.battleship()
+            if self.name == "Connect 4": await self.connect4()
+            elif self.name == "Tic Tac Toe": await self.tictactoe()
+            elif self.name == "MasterMind": await self.mastermind()
+            elif self.name == "Battleship": await self.battleship()
             del self.lang
         else: del self
 
-    async def unlimitedpregame(self):
+    async def unlimitedpregame(self): # Special game setup fuction for Hangman (and potential other games with no limit on player count)
         global inGame
         global nextID
-        pg = PreGame(self.ctx, self, "", [1, 2, 3, 4], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
+        pg = PreGame(self.ctx, self, "", list(range(1, 5)), list(range(1, 17)))
         await pg.checkPerms()
         if len(self.players) != 0:
             self.gameID = int(nextID)
@@ -589,12 +584,12 @@ class Game:
             random.shuffle(self.players)
             await self.hangman()
             del self.lang
-        else: del self
+        else: del self # Deletes this game object if it times out
         
     async def mc4pregame(self):
         global inGame
         global nextID
-        pg = PreGame(self.ctx, self, "", [4], [3, 4, 5, 6])
+        pg = PreGame(self.ctx, self, "", [4], list(range(3, 7))) # Was going to allow premium games to have 3-6 players, but haven't got around to it yet
         await pg.checkPerms()
         if self.players:
             self.gameID = int(nextID)
@@ -607,14 +602,15 @@ class Game:
     def update_stats(self):
         if self.win != "Draw" and self.name != "Hangman":
             userHasData = False
+            # For the winner (adds one to number of wins):
             for user in windata:
                 if user == self.win.id:
                     userHasData = True
                     windata[user]["T"]["W"] += 1
                     windata[user][self.name]["W"] += 1
                     break
-            if not userHasData:
-                windata[self.win.id] = {"T" : {"W": 1, "P" : 0, "D" : 0},
+            if not userHasData: # Creates a new dictionary within the windata (statistics) dictionary, with their user ID as the key
+                windata[self.win.id] = {"T" : {"W": 1, "P" : 0, "D" : 0}, # T for Total, W for wins, P for played, D for draws
                                         "Connect 4" : {"W": 0, "P" : 0, "D" : 0},
                                         "Tic Tac Toe" : {"W": 0, "P" : 0, "D" : 0},
                                         "Mega Connect 4" : {"W": 0, "P" : 0, "D" : 0},
@@ -623,6 +619,7 @@ class Game:
                                         "Hangman" : {"Co-op": {"W":0, "P":0}, "Comp":{"W":0, "P":0}}
                                         }
                 windata[self.win.id][self.name]["W"] = 1
+            # For everyone (adds one to number of games played):
             for player in inGame[self.gameID].players:
                 userHasData= False
                 for user in windata:
@@ -641,6 +638,8 @@ class Game:
                                         "Hangman" : {"Co-op": {"W":0, "P":0}, "Comp":{"W":0, "P":0, "D":0}}
                                         }
                     windata[player.id][self.name]["P"] = 1
+
+        # If a draw occurs
         elif self.name != "Hangman":
             for player in inGame[self.gameID].players:
                 userHasData= False
@@ -660,9 +659,10 @@ class Game:
                                         "Hangman" : {"Co-op": {"W":0, "P":0}, "Comp":{"W":0, "P":0, "D":0}}
                                         }
                     windata[player.id][self.name]["D"] += 1
+
         elif self.name == "Hangman":
             self.mode = self.mode.capitalize()
-            if self.mode == "Co-op" and len(self.players) == 1:
+            if self.mode == "Co-op" and len(self.players) == 1: # Singleplayer games will not count towards statistics
                 del inGame[self.gameID]
                 return
             for player in [p.id for p in self.win]:
@@ -683,7 +683,7 @@ class Game:
                                     "Hangman" : {"Co-op": {"W":0, "P":0}, "Comp":{"W":0, "P":0}}
                                     }
                     windata[player]["Hangman"][self.mode]["W"] = 1
-            if self.mode == "Co-op": people = [m.id for m in self.players]
+            if self.mode == "Co-op": people = [m.id for m in self.players] # I don't remember why I chose m as the iterable here. But hey, if it works, it works.
             else: people = [m.id for m in self.all_players]
             for person in people:
                 userHasData = False
@@ -705,7 +705,7 @@ class Game:
                     windata[person]["Hangman"][self.mode]["P"] = 1
         del inGame[self.gameID]
         file = open('windata.pkl', 'wb')
-        pickle.dump(windata, file, protocol=4)
+        pickle.dump(windata, file, protocol=4) # Updates the windata file (which contains all player statistics)
         file.close()
     
 
@@ -720,7 +720,7 @@ class Game:
         global windata
         global nextID
         global gamesPlayed
-        numReact = [
+        numReact = [ # List of reactions the bot will put on the game message
             "1️⃣",
             "2️⃣",
             "3️⃣",
@@ -729,7 +729,7 @@ class Game:
             "6️⃣",
             "7️⃣",
             ]
-        available = [
+        available = [ # The list of rows that are not full. Only emoji in this list will be considered valid reactions (this list will diminish as columns fill up over the course of the game)
             "1️⃣",
             "2️⃣",
             "3️⃣",
@@ -738,48 +738,50 @@ class Game:
             "6️⃣",
             "7️⃣",
             ]
-        counters = [["\U0001F7E1", 0xffff00], ["\U0001F534", 0xff0000]]
+        counters = [["\U0001F7E1", 0xffff00], ["\U0001F534", 0xff0000]] # The yellow and red counters used in the game by default, respectively
         for p in self.players:
             if p.id in premium:
                 check_emoji(p.id)
+                # Replaces counters with custom emoji (string) and colour (as hexadecimal integer) selected by the user (if they have premium features enabled)
                 if type(premium[p.id][0]) == str: counters[self.players.index(p)][0] = premium[p.id][0]
-                if type(premium[p.id][1]) == int: counters[self.players.index(p)][1] = premium[p.id][1]
+                if type(premium[p.id][1]) == int: counters[self.players.index(p)][1] = premium[p.id][1] 
         if counters[0][0] == counters[1][0]:
-            counters = [["\U0001F7E1", counters[0][1]], ["\U0001F534", counters[0][1]]]
+            counters = [["\U0001F7E1", counters[0][1]], ["\U0001F534", counters[0][1]]] # Reverts to the default yellow and red if both users' emoji are the same
         self.p1 = self.players[0]
         self.p2 = self.players[1]
         try:
-            self.lang.update(", ".join(player.mention for player in self.players))
+            self.lang.update(", ".join(player.mention for player in self.players)) # Generates the list of players' mentions to notify them that the game is starting
             self.msg = await self.ctx.send(self.lang.gameStarting)
             for i in numReact:
                 await self.msg.add_reaction(i)
             autoanswer = False
             offlineanswer = False
-            darken = "<:darken:722694104718508072>"
-            boardlist = [[darken, darken, darken, darken, darken, darken, darken] for i in range(6)]
+            darken = "⚫" # On the original bot, this was a custom emoji of a semi-transparent black square in a private testing server
+            boardlist = [[darken, darken, darken, darken, darken, darken, darken] for i in range(6)] # Generates the 7x6 grid as a 2-dimensional array
             def boardGen():
-                board = "\n".join("".join(i) for i in boardlist)
-                board += "\n1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣"
+                board = "\n".join("".join(i) for i in boardlist) # Formats the 2D array into a readable format (i.e. a big ol' square)
+                board += "\n1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣" # Adds the numerical indicators along the bottom of the grid
                 return board
             finished = False
             self.win = ""
-            content = counters[0][0] + " - " + self.players[0].name + "\n" + counters[1][0] + " - " + self.players[1].name
+            content = counters[0][0] + " - " + self.players[0].name + "\n" + counters[1][0] + " - " + self.players[1].name # Message content (above the embed) states which counter belongs to which player
             turn = self.players[1]
+            # -------------------------------   START GAME   ----------------------------------
             while not finished:
-                if turn == self.players[0]:
-                    turn = self.players[1]
-                else:
-                    turn = self.players[0]
-                colour = counters[self.players.index(turn)][1]
+                if turn == self.players[0]: turn = self.players[1] # Alternates turn between the two players
+                else: turn = self.players[0]
+                colour = counters[self.players.index(turn)][1] # Sets the embed's colour
+
                 board = boardGen()
                 self.killcheck()
                 self.lang.update(turn.name)
-                embed = discord.Embed(
+                embed = discord.Embed( # Generates the embed object containing the game components
                     title = self.lang.playersTurn,
                     description = board,
                     colour = colour,
                     )
-                if autoanswer:
+
+                if autoanswer: # Changes the info in the footer of the embed, based on whether the player in the previous round made their move in time
                     if turn == self.players[0]:
                         self.lang.update(self.players[1].name)
                         embed.set_footer(text=(self.lang.c4Timeout + "\n" + self.lang.c4HowTo))
@@ -793,51 +795,48 @@ class Game:
                     else:
                         self.lang.update(self.players[0].name)
                         embed.set_footer(text=(self.lang.c4Offline + "\n" + self.lang.c4HowTo))
-                else:
-                    embed.set_footer(text=self.lang.c4HowTo)
+                else: embed.set_footer(text=self.lang.c4HowTo) # This will be the default footer if the game was played properly
+
                 await self.msg.edit(content=content, embed=embed)
                 for i in numReact:
-                    if boardlist[0][numReact.index(i)] != darken:
+                    if boardlist[0][numReact.index(i)] != darken: # Checks if any columns are full by checking whether the top row has the "blank" emoji in each column
+                        # Removes the row number from the list of valid reactions
                         await self.msg.remove_reaction(i, bot.user)
-                        if i in available:
-                            available.remove(i)
-                if str(turn.status) != "offline":
-                    timeout = ReactionTimeout(self, [turn], 30, self.msg, available)
+                        if i in available: available.remove(i)
+                if str(turn.status) != "offline": # Will only go through the whole reaction timeout thing if the user is online.
+                    timeout = ReactionTimeout(self, [turn], 30, self.msg, available) # The integer in this object represents the number of seconds the user has until their turn times out
                     emoji, user = await timeout.run()
                     if emoji != "":
                         response = numReact.index(emoji)
-                        await self.msg.remove_reaction(emoji, turn)
-                        autoanswer = False
-                        offlineanswer = False
+                        await self.msg.remove_reaction(emoji, turn) # Removes the user's rection after processing it for convenience
+                        autoanswer, offlineanswer = False, False
                     else:
-                        response = random.randint(0, 7)
+                        response = random.randint(0, 7) # Picks a random column as the user's move if they run out of time
                         while (str(response + 1) + "️⃣") not in available:
                             response = random.randint(0, 7)
-                        autoanswer = True
-                        offlineanswer = False
+                        autoanswer, offlineanswer = True, False
                 else:
-                    response = random.randint(0, 7)
+                    response = random.randint(0, 7) # Picks a random column as the user's move if they are offline
                     while (str(response + 1) + "️⃣") not in available:
                         response = random.randint(0, 7)
-                    autoanswer = False
-                    offlineanswer = True
-                for row in range(6):
+                    autoanswer, offlineanswer = False, True
+                    
+                for row in range(6): # Places the counter in the appropriate position. As it goes through the loop, the counter will drop from the top of the column to the bottom, just as it would appear in real life.
                     if row > 0:
-                        boardlist[row-1][response] = darken
-                    if turn == self.players[0]:
-                        boardlist[row][response] = counters[0][0]
-                    else:
-                        boardlist[row][response] = counters[1][0]
-                    if row < 5 and boardlist[row + 1][response] != darken:
-                        break
-        #----------------------------------- WIN DETECTION -----------------------------------
+                        boardlist[row-1][response] = darken # Replaces the counter left in the row above in the previous iteration with the blank placeholder
+                    if turn == self.players[0]: boardlist[row][response] = counters[0][0] # Places the player's counter in the selected position
+                    else: boardlist[row][response] = counters[1][0]
+                    if row < 5 and boardlist[row + 1][response] != darken: break # Stops the loop if the row below already has a counter in it.
+                    
+                    # Originally this loop updated the board (and embed) in each iteration for an animation in the Discord client of the counter dropping down the board.
+                    # However, this was removed shortly after to avoid lag and being rate-limited. Feel free to add it back if your ping's decent and you don't plan on having any other simultaneous games going.
+
+                #----------------------------------- WIN DETECTION -----------------------------------
                 # Draw
                 full = True
                 for char in boardlist[0]:
-                    if char == darken:
-                        full = False
-                if full == True:
-                    self.win = "Draw"
+                    if char == darken: full = False
+                if full == True: self.win = "Draw"
                 
                 # Horizontal
                 index = self.players.index(turn)
@@ -868,12 +867,12 @@ class Game:
                                 break
                         except:
                             pass
-                if self.win != "":
-                    finished = True
+                if self.win != "": finished = True # Why did I use a variable to control the while loop instead of just a break? Good question. I don't know either.
+
             board = boardGen()
             sendExtra = True
             async for message in self.ctx.channel.history(limit=5):
-                if self.msg.id == message.id:
+                if self.msg.id == message.id: # Will send an extra message stating the results of the game if it's more than 5 messages up
                     sendExtra = False
                     break
             if self.win == "Draw":
@@ -897,24 +896,23 @@ class Game:
             await self.msg.clear_reactions()
             await self.msg.edit(content=content, embed=embed)
             self.update_stats()
-        except Kill:
-            killing.remove(self.gameID)
+        except Kill: # This runs when the stop command is used
+            killing.remove(self.gameID) # Removes this game from the list of games to end
             embed = discord.Embed(
                     title = self.lang.gameWasStopped,
                     description = board,
                     colour = 0x70081d,
                 )
             await self.msg.edit(content=content, embed=embed)
-            del inGame[self.gameID]
-            if self.p1.id not in gamesPlayed:
-                gamesPlayed[self.p1.id] = 0
-            if self.p2.id not in gamesPlayed:
-                gamesPlayed[self.p2.id] = 0
+            del inGame[self.gameID] # Deletes this game object
+            # The below checks how many games each player has played in the last two hours and, based on those numbers, determines whether a Patreon promo will be sent
+            if self.p1.id not in gamesPlayed: gamesPlayed[self.p1.id] = 0
+            if self.p2.id not in gamesPlayed: gamesPlayed[self.p2.id] = 0
             gamesPlayed[self.p1.id] += 1
             gamesPlayed[self.p2.id] += 1
-            if gamesPlayed[self.p1.id] % 8 == 0 or gamesPlayed[self.p2.id] % 8 == 0:
-                await sendPromo(self.ctx)
+            if gamesPlayed[self.p1.id] % 8 == 0 or gamesPlayed[self.p2.id] % 8 == 0: await sendPromo(self.ctx)
         except:
+            # Logs the error in errorlog.log, and attempts to edit the game message to alert the user(s) as well
             logger.exception(("Error in Connect 4 - Server: " + self.ctx.guild.name + " - Channel: " + self.ctx.channel.name), exc_info=True)
             del inGame[self.gameID]
             try:
@@ -942,7 +940,7 @@ class Game:
         global inGame
         global nextID
         global gamesPlayed
-        numReact = [
+        numReact = [ # List of reactions the bot will put on the game message
             "0️⃣",
             "1️⃣",
             "2️⃣",
@@ -955,7 +953,7 @@ class Game:
             "9️⃣",
             "🔟"
             ]
-        available = [
+        available = [ # The list of rows that are not full. Only emoji in this list will be considered valid reactions (this list will diminish as columns fill up over the course of the game)
             "0️⃣",
             "1️⃣",
             "2️⃣",
@@ -968,11 +966,12 @@ class Game:
             "9️⃣",
             "🔟",
             ]
-        default_counters = [["\U0001F7E1", 0xffff00], ["\U0001F534", 0xff0000], ["\U0001F7E2", 0x78b159], ["\U0001F535", 0x55acee]]
+        default_counters = [["\U0001F7E1", 0xffff00], ["\U0001F534", 0xff0000], ["\U0001F7E2", 0x78b159], ["\U0001F535", 0x55acee]] # The yellow, red, green and blue counters used in the game by default, respectively
         counters = [["", 0], ["", 0], ["", 0], ["", 0]]
         for p in self.players:
             if p.id in premium:
                 check_emoji(p.id)
+                # Replaces counters with custom emoji and colour selected by the user (if they have premium features enabled)
                 if type(premium[p.id][0]) == str: counters[self.players.index(p)][0] = premium[p.id][0]
                 else: counters[self.players.index(p)][0] = default_counters[self.players.index(p)][0]
                 if type(premium[p.id][1]) == int: counters[self.players.index(p)][1] = premium[p.id][1]
@@ -980,88 +979,90 @@ class Game:
             else: counters[self.players.index(p)] = default_counters[self.players.index(p)]
         for c in counters:
             for counter in counters:
-                if c[0] == counter[0]:
+                if c[0] == counter[0]: # Checks if any two emoji are identical, and reverts them to the default if so
                     counter = default_counters[counters.index(counter)]
                     c = default_counters[counters.index(c)]
         try:
-            self.lang.update(", ".join(player.mention for player in self.players))
+            self.lang.update(", ".join(player.mention for player in self.players)) # Generates the list of players' mentions to notify them that the game is starting
             self.msg = await self.ctx.send(self.lang.gameStarting)
             for i in numReact:
                 await self.msg.add_reaction(i)
             
             autoanswer = False
             offlineanswer = False
-            boardlist = ["⚫" * 11] * 10
+            boardlist = ["⚫" * 11] * 10 # Generates the 11x10 grid as a 2-dimensional array
+            # This was always the black circle, unlike Connect 4, due to custom emoji exceeding the embed limit until it was raised from 2000 to 4000 characters recently
             def boardGen():
                 board = ""
-                for a in boardlist: board += a + "\n"
-                for b in numReact: board += b
+                for a in boardlist: board += a + "\n" # Formats the 2D array into a readable format (i.e. a big ol' square)
+                for b in numReact: board += b # Adds the numerical indicators along the bottom of the grid
                 return board
             finished = False
             self.win = ""
             turn = -1
-            content = "\n".join(counters[i][0] + " - " + self.players[i].name for i in range(len(self.players)))
+            content = "\n".join(counters[i][0] + " - " + self.players[i].name for i in range(len(self.players))) # Message content (above the embed) states which counter belongs to which player
             # -------------------------------   START GAME   ----------------------------------
             while not finished:
                 turn += 1
-                if turn == 4:
-                    turn = 0
-                colour = counters[turn][1]
+                if turn == 4: turn = 0 # Cycles through the players for their turns
+                colour = counters[turn][1] # Set's the embed's colour to the current player's colour
                 board = boardGen()
                 self.killcheck()
                 self.lang.update(self.players[turn].name)
-                embed = discord.Embed(
+                embed = discord.Embed( # Generates the embed object containing the game pieces
                     title = self.lang.playersTurn,
                     description = board,
                     colour = colour,
                     )
-                if autoanswer:
+                
+                if autoanswer: # Changes the info in the footer of the embed, based on whether the player in the previous round made their move in time
                     self.lang.update(self.players[turn-1].name)
                     embed.set_footer(text=(self.lang.c4Timeout + "\n" + self.lang.c4HowTo))
                 elif offlineanswer:
                     self.lang.update(self.players[turn-1].name)
                     embed.set_footer(text=(self.lang.c4Offline + "\n" + self.lang.c4HowTo))
                 else:
-                    embed.set_footer(text=self.lang.c4HowTo)
+                    embed.set_footer(text=self.lang.c4HowTo) # This will be the default footer if the game was played properly
+
                 await self.msg.edit(content=content, embed=embed)
                 for i in numReact:
-                    if boardlist[0][numReact.index(i) - 1][0] != "⚫":
+                    if boardlist[0][numReact.index(i) - 1][0] != "⚫":  # Checks if any columns are full by checking whether the top row has the black circle emoji in each column
+                        # Removes the row number from the list of valid reactions
                         await self.msg.remove_reaction(i, bot.user)
-                        if i in available:
-                            available.remove(i)
-                if str(self.players[turn].status) != "offline":
-                    timeout = ReactionTimeout(self, [self.players[turn]], 30, self.msg, available)
+                        if i in available: available.remove(i)
+                if str(self.players[turn].status) != "offline": # Will only go through the whole reaction timeout thing if the user is online.
+                    timeout = ReactionTimeout(self, [self.players[turn]], 30, self.msg, available) # The integer in this object represents the number of seconds the user has until their turn times out# The integer in this object represents the number of seconds the user has until their turn times out
                     emoji, user = await timeout.run()
                     if emoji != "":
                         response = numReact.index(emoji)
-                        await self.msg.remove_reaction(emoji, self.players[turn])
+                        await self.msg.remove_reaction(emoji, self.players[turn]) # Removes the user's rection after processing it for convenience
                         autoanswer = False
                         offlineanswer = False
                     else:
-                        response = random.randint(0, 11)
+                        response = random.randint(0, 11) # Picks a random column as the user's move if they run out of time
                         while (str(response + 1) + "️⃣") not in available:
                             response = random.randint(0, 11)
                         autoanswer = True
                         offlineanswer = False
                 else:
-                    response = random.randint(0, 11)
+                    response = random.randint(0, 11) # Picks a random column as the user's move if they are offline
                     while (str(response + 1) + "️⃣") not in available:
                         response = random.randint(0, 11)
                     autoanswer = False
                     offlineanswer = True
                 
-                for row in range(10):
-                    if row > 0: boardlist[row-1] = boardlist[row-1][:response] + "⚫" + boardlist[row-1][response+1:]
-                    boardlist[row] = boardlist[row][:response] + counters[turn][0] + boardlist[row][response+1:]
-                    if row < 9 and boardlist[row+1][response] != "⚫": break
+                for row in range(10): # Places the counter in the appropriate position. As it goes through the loop, the counter will drop from the top of the column to the bottom, just as it would appear in real life.
+                    if row > 0: boardlist[row-1][response] = "⚫" # Replaces the counter left in the row above in the previous iteration with the blank placeholder
+                    boardlist[row][response] = counters[turn][0] # Places the player's counter in the selected position
+                    if row < 9 and boardlist[row+1][response] != "⚫": break # Stops the loop if the row below already has a counter in it.
 
         #----------------------------------- WIN DETECTION -----------------------------------
                 # Draw
                 full = True
                 for char in boardlist[0]:
-                    if char == "⚫":
-                        full = False
+                    if char == "⚫": full = False
                 if full: self.win = "Draw"
+
                 # Horizontal
                 for row in boardlist:
                     for i in range(8):
@@ -1091,13 +1092,12 @@ class Game:
                                 break
                         except:
                             pass
-                if self.win != "":
-                    finished = True
+                if self.win != "": finished = True # Why did I use a variable to control the while loop instead of just a break? Good question. I don't know either.
             board = boardGen()
             colour = counters[self.players.index(self.win)][1]
             sendExtra = True
             async for message in self.ctx.channel.history(limit=5):
-                if self.msg.id == message.id:
+                if self.msg.id == message.id: # Will send an extra message stating the results of the game if it's more than 5 messages up
                     sendExtra = False
                     break
             if self.win == "Draw":
@@ -1115,7 +1115,7 @@ class Game:
                         description = board,
                         colour = colour,
                         )
-                if sendExtra: await self.ctx.send(self.win.name + " won the Mega Connect Four game!")
+                if sendExtra: await self.ctx.send(self.win.name + " won the Mega Connect Four game!") # Oops this bit doesn't have a translation implemented
             await self.msg.clear_reactions()
             await self.msg.edit(content=content, embed=embed)
             self.update_stats()
@@ -1125,16 +1125,17 @@ class Game:
                 gamesPlayed[player.id] += 1
             if gamesPlayed[self.players[0].id] % 8 == 0 or gamesPlayed[self.players[1].id] % 8 == 0 or gamesPlayed[self.players[2].id] % 8 == 0 or gamesPlayed[self.players[3].id] % 8 == 0:
                 await sendPromo(self.ctx)
-        except Kill:
-            killing.remove(self.gameID)
+        except Kill: # Runs when the stop command is used
+            killing.remove(self.gameID) # Removes this game from the list of games to end
             embed = discord.Embed(
                 title = self.lang.gameWasStopped,
                 description = board,
                 colour = 0x70081d,
                 )
             await self.msg.edit(content=content, embed=embed)
-            del inGame[self.gameID]
+            del inGame[self.gameID] # Deletes this game object
         except:
+            # Logs the error in errorlog.log, and attempts to edit the game message to alert the user(s) as well
             logger.exception(("Error in Mega Connect 4 - Server: " + self.ctx.guild.name + " - Channel: " + self.ctx.channel.name), exc_info=True)
             del inGame[self.gameID]
             try:
@@ -1158,7 +1159,7 @@ class Game:
     async def tictactoe(self): 
         global inGame
         global nextID
-        arrows = [
+        arrows = [ # List of reactions the bot will put on the game message
             "↖️",
             "⬆️",
             "↗️",
@@ -1169,7 +1170,7 @@ class Game:
             "⬇️",
             "↘️"
             ]
-        available = [
+        available = [ # The list of spaces available to use. Only emoji in this list will be considered valid reactions (this list will diminish as columns fill up over the course of the game)
             "↖️",
             "⬆️",
             "↗️",
@@ -1181,78 +1182,82 @@ class Game:
             "↘️"
             ]
         try:
-            self.lang.update(", ".join(player.mention for player in self.players))
+            self.lang.update(", ".join(player.mention for player in self.players))# Generates the list of players' mentions to notify them that the game is starting
             self.msg = await self.ctx.send(self.lang.gameStarting)
             for i in arrows:
                 await self.msg.add_reaction(i)
-            
             turn = self.players[1]
             symbols = [["❌", 0xff9900],["⭕", 0xff9900]]
-            darken = "<:darken:722694104718508072>"
+            darken = "⬛" # On the original bot, this was a custom emoji of a semi-transparent black square in a private testing server
             for p in self.players:
                 if p.id in premium:
                     check_emoji(p.id)
+                    # Replaces symbols with custom emoji (string) and colour (as hexadecimal integer) selected by the user (if they have premium features enabled)
                     if type(premium[p.id][0]) == str: symbols[self.players.index(p)][0] = premium[p.id][0]
                     if type(premium[p.id][1]) == int: symbols[self.players.index(p)][1] = premium[p.id][1]
-            if symbols[0][0] == symbols[1][0]:
-                symbols[0][0], symbols[1][0] = "❌", "⭕"
-            content = "\n".join(symbols[i][0] + " - " + self.players[i].name for i in range(len(self.players)))
-            boardlist = [[darken for i in range(3)] for i in range(3)]
+            if symbols[0][0] == symbols[1][0]: symbols[0][0], symbols[1][0] = "❌", "⭕" # Reverts to the default noughts and crosses if both users' emoji are the same
+            content = "\n".join(symbols[i][0] + " - " + self.players[i].name for i in range(len(self.players))) # Message content (above the embed) states which counter belongs to which player
+            boardlist = [[darken for i in range(3)] for i in range(3)] # Generates the 3x3 grid as a 2D array
             done = False
             count = 0
             selection = 0
             self.win = ""
             while not done:
-                turn = self.players[self.players.index(turn)-1]
-                board = "\n──────\n".join("|".join(i) for i in boardlist)
+                turn = self.players[self.players.index(turn)-1] # Alternates turns between the two players
+                board = "\n──────\n".join("|".join(i) for i in boardlist) # Formats the 2D array into a 3x3 grid 
                 self.killcheck()
                 symbol = symbols[self.players.index(turn)][0]
                 colour = symbols[self.players.index(turn)][1]
                 self.lang.update(turn.name)
-                embed = discord.Embed(
+                embed = discord.Embed( # Generates the embed object containing the game components
                         title = symbol + self.lang.playersTurn + symbol,
                         description = board,
                         colour = colour
                     )
-                if selection == None:
+                if selection == None: # Changes the info in the footer of the embed, based on whether the player in the previous round made their move in time
                     self.lang.update(self.players[self.players.index(turn)-1].name)
                     embed.set_footer(text=(self.lang.tttTimeout + "\n\n" + self.lang.tttHowTo))
-                else:
-                    embed.set_footer(text=self.lang.tttHowTo)
+                else: embed.set_footer(text=self.lang.tttHowTo) # This will be the default footer if the game was played properly
                 await self.msg.edit(content=content, embed=embed)
-                timeout = ReactionTimeout(self, [turn], 30, self.msg, available)
+                timeout = ReactionTimeout(self, [turn], 30, self.msg, available) # The integer in this object represents the number of seconds the user has until their turn times out
                 emoji, user = await timeout.run()
                 if emoji != "":
-                    await self.msg.remove_reaction(emoji, user)
+                    await self.msg.remove_reaction(emoji, user) # Removes the user's rection after processing it for convenience
                     selection = arrows.index(emoji)
-                    await self.msg.remove_reaction(arrows[selection], bot.user)
+                    await self.msg.remove_reaction(arrows[selection], bot.user) # Removes the bot's reaction corresponding to the space taken
                     available.remove(arrows[selection])
-                    count += 1
-                else: selection = None
-                if selection != None: boardlist[int(selection/3)][selection % 3] = symbol
+                    count += 1 # Round number counter, end the loop once it hits 9
+                else: selection = None # Skips the player's turn if they time out
+                if selection != None: boardlist[int(selection/3)][selection % 3] = symbol # Places the user's symbol on the grid
+                
                 # Win Detection
+                # Horizontal
                 for row in boardlist:
                     if row[0] == row[1] == row[2] != darken:
                         self.win = turn
                         done = True
+                # Vertical
                 for column in range(3):
                     if boardlist[0][column] == boardlist[1][column] == boardlist[2][column] != darken:
                         self.win = turn
                         done = True
+                # Diagonals
                 if boardlist[0][0] == boardlist[1][1] == boardlist[2][2] != darken:
                     self.win = turn
                     done = True
                 if boardlist[0][2] == boardlist[1][1] == boardlist[2][0] != darken:
                     self.win = turn
                     done = True
+                
                 if count == 9 and self.win == "":
                     self.win = "Draw"
-                    done = True
+                    done = True # Again, not sure why a variable was used to control the loop instead of a break. But it works, so I ain't touchin' it.
+
             lose = self.players[self.players.index(turn)-1]
             board = "\n──────\n".join("|".join(i) for i in boardlist)
             sendExtra = True
             async for message in self.ctx.channel.history(limit=5):
-                if self.msg.id == message.id:
+                if self.msg.id == message.id: # Will send an extra message stating the results of the game if it's more than 5 messages up
                     sendExtra = False
                     break
             if self.win != "Draw":
@@ -1273,15 +1278,16 @@ class Game:
                 if sendExtra: await self.ctx.send(self.lang.endedInDraw)
             await self.msg.clear_reactions()
             await self.msg.edit(content=content, embed=embed)
-            self.update_stats()
+            self.update_stats() 
+            # The below checks how many games each player has played in the last two hours and, based on those numbers, determines whether a Patreon promo will be sent
             global gamesPlayed
             for player in self.players:
-                if player.id not in gamesPlayed:
-                    gamesPlayed[player.id] = 0
+                if player.id not in gamesPlayed: gamesPlayed[player.id] = 0
                 gamesPlayed[player.id] += 1
             if gamesPlayed[self.players[0].id] % 8 == 0 or gamesPlayed[self.players[1].id] % 8 == 0:
                 await sendPromo(self.ctx)
-        except Kill:
+            del inGame[self.gameID] # Deletes this Game object
+        except Kill: # Runs when the stop command is used
             killing.remove(self.gameID)
             embed = discord.Embed(
                     title = self.lang.gameWasStopped,
@@ -1290,8 +1296,9 @@ class Game:
                 )
             await self.msg.edit(content=content, embed=embed)
             await self.msg.clear_reactions()
-            del inGame[self.gameID]
+            del inGame[self.gameID] # Deletes this Game object
         except:
+            # Logs the error in errorlog.log, and attempts to edit the game message to alert the user(s) as well
             logger.exception(("Error in Tic Tac Toe - Server: " + self.ctx.guild.name + " - Channel: " + self.ctx.channel.name), exc_info=True)
             del inGame[self.gameID]
             try:
@@ -3878,17 +3885,17 @@ async def colour(ctx, r="", g="", b=""):
 
 
 
-# ------------------------------------------------------------------------------------------ DEV STUFF ----------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------ DEV COMMANDS ----------------------------------------------------------------------------------------
 
 @bot.command()
 async def shard(ctx):
-    if ctx.author.id == 449433954529837056:
+    if ctx.author.id in dev_user_ids:
         await ctx.send("This guild is in shard #{} out of {}".format(str(ctx.guild.shard_id), str(bot.shard_count)))
 
 @bot.command()
 async def save(ctx):
     global windata
-    if ctx.author.id == 449433954529837056:
+    if ctx.author.id in dev_user_ids:
         file = open('windata.pkl', 'wb')
         pickle.dump(windata, file, protocol=4)
         file.close()
@@ -3898,7 +3905,7 @@ async def save(ctx):
 async def killbot(ctx):
     global windata
     global killingBot
-    if ctx.author.id == 449433954529837056:
+    if ctx.author.id in dev_user_ids:
         currentGames = {"MasterMind" : 0, "Tic Tac Toe" : 0, "Connect 4" : 0, "Mega Connect 4" : 0, "Battleship" : 0, "Hangman" : 0}
         for g in inGame:
             currentGames[inGame[g].name] += 1
@@ -3935,7 +3942,7 @@ async def killbot(ctx):
 
 @bot.command()
 async def running(ctx):
-    if ctx.author.id == 449433954529837056:
+    if ctx.author.id in dev_user_ids:
         currentGames = {"MasterMind" : 0, "Tic Tac Toe" : 0, "Connect 4" : 0, "Mega Connect 4" : 0, "Battleship" : 0, "Hangman" : 0}
         for game in inGame:
             currentGames[inGame[game].name] += 1
@@ -3962,7 +3969,7 @@ async def running(ctx):
 
 @bot.command()
 async def servers(ctx):
-    if ctx.author.id == 449433954529837056:
+    if ctx.author.id in dev_user_ids:
         string = ""
         count = 0
         member_count = 0
@@ -3978,7 +3985,7 @@ async def servers(ctx):
 
 @bot.command(aliases=["fr", "forcestop", "fs"])
 async def forceremove(ctx, game=None):
-    if ctx.author.id == 449433954529837056:
+    if ctx.author.id in dev_user_ids:
         try:
             gameName = inGame[int(game)].name
             gamectx = inGame[int(game)].ctx
@@ -3990,7 +3997,7 @@ async def forceremove(ctx, game=None):
 @bot.command(aliases=["vp"])
 async def viewpremium(ctx):
     global premium
-    if ctx.author.id == 449433954529837056:
+    if ctx.author.id in dev_user_ids:
         string = ""
         for i in premium:
             if bot.get_user(i): string += str(i) + " - " + str(bot.get_user(i)) + "\n"
@@ -4001,7 +4008,7 @@ async def viewpremium(ctx):
 
 @bot.command()
 async def padd(ctx, uid):
-    if ctx.author.id != 449433954529837056:
+    if ctx.author.id not in dev_user_ids:
         return
     try:
         uid = int(uid)
@@ -4026,7 +4033,7 @@ async def padd(ctx, uid):
 
 @bot.command()
 async def premove(ctx, uid):
-    if ctx.author.id != 449433954529837056:
+    if ctx.author.id not in dev_user_ids:
         return
     try:
         uid = int(uid)
@@ -4049,7 +4056,7 @@ async def premove(ctx, uid):
 
 @bot.command()
 async def toggle(ctx):
-    if ctx.author.id != 449433954529837056:
+    if ctx.author.id not in dev_user_ids:
         return
     if not ctx.guild.id in premium:
         premium[ctx.guild.id] = 0
@@ -4060,7 +4067,7 @@ async def toggle(ctx):
 
 @bot.command(aliases=["as"])
 async def addstatus(ctx, *, status):
-    if ctx.author.id != 449433954529837056:
+    if ctx.author.id not in dev_user_ids:
         return
     global statuses
     statuses.append(status)
@@ -4068,7 +4075,7 @@ async def addstatus(ctx, *, status):
 
 @bot.command(aliases=["vs", "viewstatuses"])
 async def viewstatus(ctx):
-    if ctx.author.id != 449433954529837056:
+    if ctx.author.id not in dev_user_ids:
         return
     global statuses
     string = ""
@@ -4077,7 +4084,7 @@ async def viewstatus(ctx):
 
 @bot.command(aliases=["rs", "remstatus"])
 async def removestatus(ctx, *, status):
-    if ctx.author.id != 449433954529837056:
+    if ctx.author.id not in dev_user_ids:
         return
     global statuses
     try: statuses.pop(int(status))
