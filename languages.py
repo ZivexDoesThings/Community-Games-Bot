@@ -58,7 +58,7 @@ class Language:
             self.tttshortdesc = "Get 3 in a row to win!"
             self.mmshortdesc = "Solve your opponent's code!"
             self.hmshortdesc = "Figure out the word to avoid getting hung!"
-            self.moreinfo = "Type {}help [command] to view more information on a command".format(self.prefix)
+            self.moreinfo = "Type {}help [command] to view more information on a command".format(self.prfx)
 
             self.misccommands = "Miscellaneous/Utility Commands"
             self.stopshortdesc = "Ends the game you're currently in"
@@ -1339,7 +1339,7 @@ class Language:
             self.tttshortdesc = "三连一串来赢！"
             self.mmshortdesc = "破解对手的代码！"
             self.hmshortdesc = "在你被吊前猜对字！"
-            self.moreinfo = "键入{}help（命令）以查看有关命令的更多信息".format(self.prefix)
+            self.moreinfo = "键入{}help（命令）以查看有关命令的更多信息".format(self.prfx)
 
             self.misccommands = "程序命令"
             self.stopshortdesc = "结束你正在玩的游戏"
@@ -1650,7 +1650,7 @@ class Language:
             self.tttshortdesc = "Поставьте 3 свой фигуры в ряд, чтобы выиграть!"
             self.mmshortdesc = "Решите код своего оппонента!"
             self.hmshortdesc = "Отгадайте слово, чтобы Вас не повесили!"
-            self.moreinfo = "Напечатайте {}помощь [команда], чтобы увидеть больше информации о команде".format(self.prefix)
+            self.moreinfo = "Напечатайте {}помощь [команда], чтобы увидеть больше информации о команде".format(self.prfx)
 
             self.misccommands = "Разное/Утилиты"
             self.stopshortdesc = "Заканчивает игру, в которой Вы находитесь"
@@ -1990,7 +1990,7 @@ class Language:
             self.tttshortdesc = "Miej 3 pola w rzędzie by wygrać!"
             self.mmshortdesc = "Złam kod przeciwnika!"
             self.hmshortdesc = "Odgadnij słowo zanim stracisz wszystkie szanse!"
-            self.moreinfo = "Wpisz {}help (komenda) aby zobaczyć więcej informacji na temat komendy".format(self.prefix)
+            self.moreinfo = "Wpisz {}help (komenda) aby zobaczyć więcej informacji na temat komendy".format(self.prfx)
 
             self.misccommands = "Różne/Komendy Użytkowe"
             self.stopshortdesc = "Kończy grę, w której uczestniczysz"
