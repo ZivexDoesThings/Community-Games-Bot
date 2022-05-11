@@ -589,7 +589,7 @@ class Game:
     async def mc4pregame(self):
         global inGame
         global nextID
-        pg = PreGame(self.ctx, self, "", [4], list(range(3, 7))) # Was going to allow premium games to have 3-6 players, but haven't got around to it yet
+        pg = PreGame(self.ctx, self, "", [4], list(range(3, 7))) # Planning to allow premium games to have 3-6 players, but haven't got around to it yet
         await pg.checkPerms()
         if self.players:
             self.gameID = int(nextID)
@@ -910,7 +910,7 @@ class Game:
             if self.p2.id not in gamesPlayed: gamesPlayed[self.p2.id] = 0
             gamesPlayed[self.p1.id] += 1
             gamesPlayed[self.p2.id] += 1
-            if gamesPlayed[self.p1.id] % 8 == 0 or gamesPlayed[self.p2.id] % 8 == 0: await sendPromo(self.ctx)
+            if gamesPlayed[self.p1.id] % 5 == 0 or gamesPlayed[self.p2.id] % 5 == 0: await sendPromo(self.ctx)
         except:
             # Logs the error in errorlog.log, and attempts to edit the game message to alert the user(s) as well
             logger.exception(("Error in Connect 4 - Server: " + self.ctx.guild.name + " - Channel: " + self.ctx.channel.name), exc_info=True)
@@ -1115,7 +1115,7 @@ class Game:
                         description = board,
                         colour = colour,
                         )
-                if sendExtra: await self.ctx.send(self.win.name + " won the Mega Connect Four game!") # Oops this bit doesn't have a translation implemented
+                if sendExtra: await self.ctx.send(self.win.name + " won the Mega Connect Four game!") # TRANSLATION MISSING
             await self.msg.clear_reactions()
             await self.msg.edit(content=content, embed=embed)
             self.update_stats()
@@ -1123,7 +1123,7 @@ class Game:
                 if player.id not in gamesPlayed:
                     gamesPlayed[player.id] = 0
                 gamesPlayed[player.id] += 1
-            if gamesPlayed[self.players[0].id] % 8 == 0 or gamesPlayed[self.players[1].id] % 8 == 0 or gamesPlayed[self.players[2].id] % 8 == 0 or gamesPlayed[self.players[3].id] % 8 == 0:
+            if gamesPlayed[self.players[0].id] % 5 == 0 or gamesPlayed[self.players[1].id] % 5 == 0 or gamesPlayed[self.players[2].id] % 5 == 0 or gamesPlayed[self.players[3].id] % 5 == 0:
                 await sendPromo(self.ctx)
         except Kill: # Runs when the stop command is used
             killing.remove(self.gameID) # Removes this game from the list of games to end
@@ -1284,7 +1284,7 @@ class Game:
             for player in self.players:
                 if player.id not in gamesPlayed: gamesPlayed[player.id] = 0
                 gamesPlayed[player.id] += 1
-            if gamesPlayed[self.players[0].id] % 8 == 0 or gamesPlayed[self.players[1].id] % 8 == 0:
+            if gamesPlayed[self.players[0].id] % 5 == 0 or gamesPlayed[self.players[1].id] % 5 == 0:
                 await sendPromo(self.ctx)
             del inGame[self.gameID] # Deletes this Game object
         except Kill: # Runs when the stop command is used
@@ -1334,25 +1334,25 @@ class Game:
         colours = [0x3f6e34, 0x3f6e34]
         for p in self.players:
             if p.id in premium and type(premium[p.id][1]) == int:
-                colours[self.players.index(p)] = premium[p.id][1]
-        def results_gen(embed):
+                colours[self.players.index(p)] = premium[p.id][1] # Sets the sidebar colour for each user's turn to their custom colour, if they have one. Will otherwise keep the default of #3f6e34
+        def results_gen(embed): # Generates the results screen at the end of the game
             try:
-                embed.add_field(name=("**" + self.p1.name + ":**\n" + self.lang.roundNumber + "1: "), value=(prevRounds1[0][0] + "\n" + prevRounds1[0][1]), inline=False)
+                embed.add_field(name=("**" + self.p1.name + ":**\n" + self.lang.roundNumber + "1: "), value=(prevRounds1[0][0] + "\n" + prevRounds1[0][1]), inline=False) # The first field added includes the user's name as an indicator
                 for item in prevRounds1:
-                    if prevRounds1.index(item) != 0:
-                        embed.add_field(name=(self.lang.roundNumber + str(prevRounds1.index(item) + 1) + ": "), value=(item[0] + "\n" + item[1]), inline=False)
-                embed.add_field(name="\u200b", value="\u200b", inline=False)
+                    if prevRounds1.index(item) != 0: # Skips over the first attempt, as that was used in the first field, outside of the loop
+                        embed.add_field(name=(self.lang.roundNumber + str(prevRounds1.index(item) + 1) + ": "), value=(item[0] + "\n" + item[1]), inline=False) # Adds a field for each attempt containing the attempt (round) number (in the 'name' section), the user's guess, and the outcome of that guess (in the 'value' section).
+                embed.add_field(name="\u200b", value="\u200b", inline=False) # Creates an empty field for space between the two user's results
                 try:
                     embed.add_field(name=("**" + self.p2.name + ":**\n" + self.lang.roundNumber + "1: "), value=(prevRounds2[0][0] + "\n" + prevRounds2[0][1]), inline=False)
                     for thing in prevRounds2:
                         if prevRounds2.index(thing) != 0:
                             embed.add_field(name=(self.lang.roundNumber + str(prevRounds2.index(thing) + 1) + ": "), value=(thing[0] + "\n" + thing[1]), inline=False)
-                except:
+                except: # An exception occurs in the above try bracket when no rounds have been played by the second player, which only happens when the 'stop' command is used. The userDidNotComplete response reflects this as necessary
                     self.lang.update(self.p2.name)
                     embed.add_field(name=self.lang.userDidNotComplete, value="\u200b", inline=False)
             except:
-                embed.add_field(name=self.lang.noRounds, value="\u200b", inline=False)
-        if self.mode.lower() in self.lang.modes["number"] or self.mode.lower() in ["numbers", "number", "n"]:
+                embed.add_field(name=self.lang.noRounds, value="\u200b", inline=False) # An exception occurs in the top-level try bracket when no rounds have been played by either player, which only happens when the 'stop' command is used. The noRounds response reflects this as necessary
+        if self.mode.lower() in self.lang.modes["number"] or self.mode.lower() in ["numbers", "number", "n"]: # Sets the emoji used in the code(s) depending on the user's game mode choice. Defaults to colours
             self.digits = [
                 "1️⃣",
                 "2️⃣",
@@ -1379,7 +1379,7 @@ class Game:
                 "⚫"
                 ]
             digitType = "colour"
-        self.lang.update(mode=digitType)
+        self.lang.update(mode=digitType) # Updates the language object to ensure the correct words are used for the code type
         class Setup:
             def __init__(self, parent, user):
                 self.parent = parent
@@ -1390,29 +1390,27 @@ class Game:
                 try:
                     self.message = await self.user.send(self.parent.lang.prepareMakeCode)
                 except:
-                    self.parent.lang.update(self.user.mention)
-                    await self.parent.msg.edit(content=self.parent.lang.needToDM)
-                    self.code = ["unavailable", self.user.mention]
+                    self.parent.lang.update(self.user.mention) 
+                    await self.parent.msg.edit(content=self.parent.lang.needToDM) # Edits the main message if it cannot reach the player's DMs, and cancels the game
+                    self.code = ["unavailable", self.user.mention] # Returns the code as a tuple of 'unavailable' and their mention string, used in the parent 
                     return
                 for emoji in self.parent.digits:
-                    await self.message.add_reaction(emoji)
+                    await self.message.add_reaction(emoji) # Adds the reactions corresponding to the emojis usable in the code (colours/numbers), to be used as buttons
                 try:
-                    for i in range(6):
-                        embed = discord.Embed(
+                    for i in range(6): # Repeats 6 times, until the full 6-digit code is complete
+                        embed = discord.Embed( # Creates/updates the embed containing the partially completed code
                             title = self.parent.lang.createCode,
                             description = " ".join(self.code),
                             colour = 0xc9c9c9
                         )
                         embed.set_footer(text=self.parent.lang.mmTimeLimit)
                         await self.message.edit(content=None, embed=embed)
-                        timeout = ReactionTimeout(self, [self.user], 20, self.message, self.parent.digits)
-                        emoji, person = await timeout.run()
-                        if emoji != "":
-                            self.code[i] = emoji
-                        else:
-                            self.code[i] = self.parent.digits[random.randint(0, len(self.parent.digits) - 1)]
+                        timeout = ReactionTimeout(self, [self.user], 20, self.message, self.parent.digits) # Creates a timer object that will wait for a reaction from the digits list for 20 seconds
+                        emoji, person = await timeout.run() # Starts the timer, and recieves the emoji the user reacted with, and the user that reacted (which is irrelevant in this case)
+                        if emoji != "": self.code[i] = emoji # If the player selected an item in time, it will add it in the relevant slot of the code
+                        else: self.code[i] = self.parent.digits[random.randint(0, len(self.parent.digits) - 1)] # Selects a random colour/number if the user takes too long to input one (i.e. timer times out)
                         self.parent.killcheck()
-                    embed = discord.Embed(
+                    embed = discord.Embed( # Updates the embed with the finished code, prompting the user to go back to the channel the command was run in
                             title = self.parent.lang.codeFinished,
                             description = "".join(self.code),
                             colour = 0x00ff00
@@ -1420,16 +1418,15 @@ class Game:
                     embed.set_footer(text=self.parent.lang.goToChannel)
                     await self.message.edit(content=None, embed=embed)
                     return
-                except Kill:
-                    embed = discord.Embed(
+                except Kill: # If the stop command is run
+                    embed = discord.Embed( # Updates the embed to inform the user that the game has been stopped
                             title = self.parent.lang.gameWasStopped,
                             description = " ".join(self.code),
                             colour = 0x401118
                         )
                     await self.message.edit(content=None, embed=embed)
-                    for emoji in self.parent.digits:
-                        await self.message.remove_reaction(emoji, bot.user)
-                    self.code = "kill"
+                    await self.message.clear_reactions()
+                    self.code = "kill" # Used as a signal to raise the Kill exception in the parent object
         
         try:
             self.msg = await self.ctx.send(self.lang.mmWaitForCodes)
@@ -1437,25 +1434,22 @@ class Game:
             p2code = Setup(self, self.players[1])
             await asyncio.gather(p1code.makeCode(), p2code.makeCode())
             codes = [p1code.code, p2code.code]
-            if codes[0] == "kill":
-                raise Kill
+            if codes[0] == "kill": raise Kill # The Setup object does the kill check, so it is passed on to the parent if it is triggered.
             unavailable = []
             for code in codes:
-                if code[0] == "unavailable":
-                    unavailable.append(code[1])
-                    del inGame[self.gameID]
-            if len(unavailable) == 1:
-                self.lang.update(unavailable[0])
-                await self.msg.edit(content=self.lang.needToDM)
-                return
-            elif len(unavailable) == 2:
-                self.lang.update(", ".join(unavailable))
+                if code[0] == "unavailable": # If a player has DMs closed, they will be added to the list of people to notify 
+                    unavailable.append(code[1]) # Adds the user's mention string to the 'unavailable' list
+                    del inGame[self.gameID] # Removes the game object from the inGame list, since it's no longer in use.
+            if len(unavailable) > 0:
+                if len(unavailable) == 1: self.lang.update(unavailable[0]) # Pings just the one user that has DMs closed
+                elif len(unavailable) == 2: self.lang.update(", ".join(unavailable)) # Pings both users if they both have DMs closed
                 await self.msg.edit(content=self.lang.needToDM)
                 return
             await self.msg.delete()
+            del p1code, p2code # Deletes the setup objects, as they are no longer necessary
             self.killcheck()
             self.lang.update(", ".join(player.mention for player in self.players))
-            self.msg = await self.ctx.send(self.lang.gameStarting)
+            self.msg = await self.ctx.send(self.lang.gameStarting) # Pings all the players, bringing them back to the channel the game is in as it starts
             for i in self.digits:
                 await self.msg.add_reaction(i)
             prevRounds1 = []
@@ -1466,6 +1460,7 @@ class Game:
             
             while (not p1finished) or (not p2finished):
                 guess = list("------")
+                # Turn switcher, will switch from player one to player two and vice versa - unless one player has finished, in which case the remaining player will keep going.
                 if turn == self.players[0]:
                     if not p2finished:
                         turn = self.players[1]
@@ -1480,57 +1475,58 @@ class Game:
                     else:
                         turn = self.players[1]
                         index = 0
+
                 colour = colours[self.players.index(turn)]
                 for i in range(6):
-                    self.lang.update(turn.name)
-                    if not prevRounds2:
+                    self.lang.update(turn.name) # Inserts the player's name into "It's [player]'s turn!" for each language
+                    if not prevRounds2: # If there are no previous rounds in player 2's list (i.e. this is the first round for either player)
                         embed = discord.Embed(
                         title = self.lang.playersTurn,
                         description = " ".join(guess),
                         colour = colour
                     )
                     else:
-                        embed = discord.Embed(
+                        embed = discord.Embed( # Generates the base embed, which we'll add extra fields to shortly
                         title = self.lang.playersTurn,
                         description = self.lang.previousTurns,
                         colour = colour
                     )
+                        count = 0
                         if turn == self.players[0]:
                             for item in prevRounds1:
-                                embed.add_field(name=(self.lang.roundNumber + str(prevRounds1.index(item) + 1) + ": "), value=(item[0] + "\n" + item[1]), inline=False)
+                                count += 1
+                                embed.add_field(name=(self.lang.roundNumber + str(count) + ": "), value=(item[0] + "\n" + item[1]), inline=False) # Creates a list of all the player's previous turns in the embed. item[0] being the guess, and item[1] being the results
                         else:
                             for thing in prevRounds2:
-                                embed.add_field(name=(self.lang.roundNumber + str(prevRounds2.index(thing) + 1) + ": "), value=(thing[0] + "\n" + thing[1]), inline=False)
+                                count += 1
+                                embed.add_field(name=(self.lang.roundNumber + str(count) + ": "), value=(thing[0] + "\n" + thing[1]), inline=False)
                         embed.add_field(name=self.lang.thisTurn, value=" ".join(guess), inline=False)
                     embed.set_footer(text=self.lang.mmTimeLimit)
                     await self.msg.edit(content=None, embed=embed)
                     self.killcheck()
-                    timeout = ReactionTimeout(self, [turn], 20, self.msg, self.digits)
+                    timeout = ReactionTimeout(self, [turn], 20, self.msg, self.digits) # Creates a timer object that will wait for a reaction from the current player, using anything from the digits list for 20 seconds
                     emoji, user = await timeout.run()
                     if emoji != "":
                         await self.msg.remove_reaction(emoji, user)
-                        guess[i] = emoji
-                    else:
-                        guess[i] = random.choice(self.digits)
+                        guess[i] = emoji # Sets the current index in the guess array with the selected digit
+                    else: guess[i] = random.choice(self.digits) # Will choose a random digit if the timer times out
                 feedback = ""
-                for num in range(6):
-                    if guess[num] == codes[index][num]:
+                for num in range(6): # Generates the turn's results as a string of emojis
+                    if guess[num] == codes[index][num]: 
                         feedback += "✅"
                     elif guess[num] in codes[index]:
                         feedback += "❔"
                     else:
                         feedback += "❌"
-                guess = "".join(guess)
+                guess = "".join(guess) # Turns the guess array into a string
                 if turn == self.p1:
-                    prevRounds1 += [(guess, feedback)]
-                    if feedback == "✅✅✅✅✅✅":
-                        p1finished = True
+                    prevRounds1 += [(guess, feedback)] # Adds the current turn to the list of previous rounds as a tuple of (guess, results)
+                    if feedback == "✅✅✅✅✅✅": p1finished = True
                 elif turn == self.p2:
                     prevRounds2 += [(guess, feedback)]
-                    if feedback == "✅✅✅✅✅✅":
-                        p2finished = True
+                    if feedback == "✅✅✅✅✅✅": p2finished = True
                 self.lang.update(turn.name, mode=digitType)
-                embed = discord.Embed(
+                embed = discord.Embed( # Generates the embed for the results screen
                         title = self.lang.resultsFromTurn,
                         description = guess +"\n" + feedback,
                         colour = colour
@@ -1539,11 +1535,11 @@ class Game:
                 await self.msg.edit(content=None, embed=embed)
                 self.killcheck()
                 await self.msg.add_reaction("👍") 
-                timeout = ReactionTimeout(self, [turn], 30, self.msg, ["👍"])
+                timeout = ReactionTimeout(self, [turn], 30, self.msg, ["👍"]) # Waits for the thumbs up from the relevant user, but will move on in 30 seconds anyway
                 emoji, user = await timeout.run()
                 await self.msg.clear_reaction("👍")
                 self.killcheck()
-                if feedback == "✅✅✅✅✅✅" and ((p1finished and not p2finished) or (p2finished and not p1finished)):
+                if feedback == "✅✅✅✅✅✅" and ((p1finished and not p2finished) or (p2finished and not p1finished)): # If one player has finished, it lets the other player know that the game continues for them until they finish
                     self.lang.update(turn.name)
                     embed = discord.Embed(
                             title = self.lang.notOverYet,
@@ -1551,9 +1547,9 @@ class Game:
                             colour = 0xf20045
                         )
                     await self.msg.edit(content=None, embed=embed)
-                    await asyncio.sleep(5)
+                    await asyncio.sleep(5) # Waits 5 seconds before moving on
                 self.killcheck()
-            if len(prevRounds1) < len(prevRounds2):
+            if len(prevRounds1) < len(prevRounds2): # Decides who the winner is based on the number of rounds they each took
                 self.win = self.players[0]
                 lose = self.players[1]
             elif len(prevRounds1) > len(prevRounds2):
@@ -1562,7 +1558,7 @@ class Game:
             else:
                 self.win = "Draw"
             sendExtra = True
-            async for message in self.ctx.channel.history(limit=5):
+            async for message in self.ctx.channel.history(limit=5): # If the game message is more than 5 messages up, it will send an extra message to signify where the game ended in the chat log
                 if self.msg.id == message.id:
                     sendExtra = False
                     break
@@ -1572,10 +1568,10 @@ class Game:
                         title = self.lang.draw,
                         colour = 0x54396e
                     )
-                self.lang.update([p.name for p in self.players], "MasterMind")
+                self.lang.update([p.name for p in self.players], "MasterMind") # Inserts the players and "MasterMind" to the endedInDraw message
                 if sendExtra: await self.ctx.send(self.lang.endedInDraw)
             else:
-                if colours[self.players.index(self.win)] != 0x3f6e34: colour = colours[self.players.index(self.win)]
+                if colours[self.players.index(self.win)] != 0x3f6e34: colour = colours[self.players.index(self.win)] # Sets the embed colour to the winner's custom colour, if they have one. Otherwise, will use #b242cf
                 else: colour = 0xb242cf
                 self.lang.update(self.win.name, "MasterMind", lose.name)
                 embed = discord.Embed(
@@ -1586,40 +1582,37 @@ class Game:
             results_gen(embed)
             await self.msg.edit(content=None, embed=embed)
             await self.msg.clear_reactions()
-            self.update_stats()
+            self.update_stats() # Takes the win statistics from this game and adds it to the player's total stats, shown in the statistics and leaderboard commands
             
-            if self.p1.id not in gamesPlayed:
-                gamesPlayed[self.p1.id] = 0
-            if self.p2.id not in gamesPlayed:
-                gamesPlayed[self.p2.id] = 0
+            if self.p1.id not in gamesPlayed: gamesPlayed[self.p1.id] = 0 # Adds the users to the gamesPlayed dict if they aren't already in it
+            if self.p2.id not in gamesPlayed: gamesPlayed[self.p2.id] = 0
             gamesPlayed[self.p1.id] += 1
             gamesPlayed[self.p2.id] += 1
-            if gamesPlayed[self.p1.id] % 8 == 0 or gamesPlayed[self.p2.id] % 8 == 0: await sendPromo(self.ctx)
+            if gamesPlayed[self.p1.id] % 5 == 0 or gamesPlayed[self.p2.id] % 5 == 0: await sendPromo(self.ctx) # Will send a promo for Patreon if either player has played any multiple of 5 games since the last autosave (which happens every 2 hours - see prune_users in the LoopsCog class)
         except Kill:
             killing.remove(self.gameID)
-            playersInThisGame = self.players
             del inGame[self.gameID]
-            if p1finished and not p2finished:
+            if p1finished and not p2finished: # Sets player 1 as the winner if they have already won
                 self.win = self.players[0]
                 lose = self.players[1]
-            elif p2finished and not p1finished:
+            elif p2finished and not p1finished: # Sets player 2 as the winner if they have already won
                 self.win = self.players[1]
                 lose = self.players[0]
             else:
                 self.win = ""
             sendExtra = True
-            async for message in self.ctx.channel.history(limit=5):
+            async for message in self.ctx.channel.history(limit=5): # If the game message is more than 5 messages up, it will send an extra message to signify where the game ended in the chat log
                 if self.msg.id == message.id:
                     sendExtra = False
                     break
             if self.win != "":
                 self.lang.update(self.win.name, "MasterMind", lose.name)
-                if len(prevRounds1) == len(prevRounds2) + 1:
+                if len(prevRounds1) == len(prevRounds2) + 1: # If player 2 hasn't finished at least the same number of rounds as player 1, it'll only be a 'possible' win for player 1, as player 2 still had the chance to make it a draw
                     embed = discord.Embed(
                                 title = self.lang.gameEndedPossibleWinner,
                                 colour = 0xa3145e
                             )
-                elif len(prevRounds1) <= len(prevRounds2):
+                elif len(prevRounds1) <= len(prevRounds2): # If player has had the chance to make a draw and failed, it is a definite win for player 1
                     embed = discord.Embed(
                                 title = self.lang.gameEndedWinner,
                                 colour = 0xa3145e
@@ -1662,7 +1655,7 @@ class Game:
             results_gen(embed)
             await self.msg.edit(content=None, embed=embed)
             await self.msg.clear_reactions()
-        except:
+        except: # Same as before, essentially. Just added to the error log in addition
             logger.exception(("Error in MasterMind - Server: " + self.ctx.guild.name + " - Channel: " + self.ctx.channel.name), exc_info=True)
             del inGame[self.gameID]
             try:
@@ -1681,7 +1674,7 @@ class Game:
                         self.win = ""
                     if self.win != "":
                         embed = discord.Embed(
-                                title = "An error occured, however, " + self.win.name + " won!",
+                                title = "An error occured, however, " + self.win.name + " won!", # TRANSLATION MISSING
                                 colour = 0xe05b4c
                             )
                         userHasData = False
@@ -2212,7 +2205,7 @@ class Game:
                 gamesPlayed[self.p2.id] = 0
             gamesPlayed[self.p1.id] += 1
             gamesPlayed[self.p2.id] += 1
-            if gamesPlayed[self.p1.id] % 8 == 0 or gamesPlayed[self.p2.id] % 8 == 0:
+            if gamesPlayed[self.p1.id] % 5 == 0 or gamesPlayed[self.p2.id] % 5 == 0:
                 await sendPromo(self.ctx)
         except Kill:
             killing.remove(self.gameID)
@@ -2511,7 +2504,7 @@ class Game:
                 for p in self.players:
                     if p.id not in gamesPlayed: gamesPlayed[p.id] = 0
                     gamesPlayed[p.id] += 1
-                    if gamesPlayed[p.id] % 8 == 0 and not sentPromo:
+                    if gamesPlayed[p.id] % 5 == 0 and not sentPromo:
                         await sendPromo(self.ctx)
                         sentPromo = True
             except:
@@ -2891,7 +2884,7 @@ class Game:
                     for p in self.all_players:
                         if p.id not in gamesPlayed: gamesPlayed[p.id] = 0
                         gamesPlayed[p.id] += 1
-                        if gamesPlayed[p.id] % 8 == 0:
+                        if gamesPlayed[p.id] % 5 == 0:
                             try:
                                 await sendPromo(self.ctx)
                                 sentPromo = True
@@ -3885,7 +3878,7 @@ async def colour(ctx, r="", g="", b=""):
 
 
 
-# ------------------------------------------------------------------------------------------ DEV COMMANDS ----------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------ DEV-ONLY COMMANDS ----------------------------------------------------------------------------------------
 
 @bot.command()
 async def shard(ctx):
